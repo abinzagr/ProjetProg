@@ -5,7 +5,9 @@ Installation
 MarioGame (https://github.com/abinzagr/ProjetProg)
 
 Mabeno@pitikey: git clone https://github.com/abinzagr/ProjetProg.git
+
 Mabeno@pitikey: cd ProjetProg
+
 Mabeno@pitikey: make
 
 You could pushed you just need follow those instrucions:
