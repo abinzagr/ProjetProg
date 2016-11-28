@@ -41,19 +41,15 @@ void map_new (unsigned width, unsigned height){
 void map_save (char *filename){
 	int mapSave = open(filename, O_WRONLY|O_CREAT, 0666);
 
-	char n = '\n';
-	int endOfMap = -1;
 	int width = map_width();
 	int height = map_height();
 	int nbObjects = map_objects();
 
-	int object, nameObj;//, framesObj, solidityObj, destructibleObj, collectibleObj, generatorObj;
-
 	write(mapSave, &width, sizeof(int));
 	write(mapSave, &height, sizeof(int));
 	write(mapSave, &nbObjects, sizeof(int));
-	write(mapSave, &n, sizeof(char));
 
+	int object, nameObj, endOfMap = -1;
 	for(int i=0 ; i<width ; i++)
 		for(int j=0 ; j<height ; j++){
 			object = map_get(i,j);
@@ -70,25 +66,31 @@ void map_save (char *filename){
 					nameObj = 4;
 				else if(!strcmp(map_get_name(object), "images/coin.png"))
 					nameObj = 5;
-				/*framesObj = map_get_frames(object);
-				solidityObj = map_get_solidity(object);
-				destructibleObj = map_is_destructible(object);
-				collectibleObj = map_is_collectible(object);
-				generatorObj = map_is_generator(object);*/
 
 				write(mapSave, &i, sizeof(int));
 				write(mapSave, &j, sizeof(int));
-				write(mapSave, &nameObj, sizeof(int));
-				/*write(mapSave, &framesObj, sizeof(int));
-				write(mapSave, &solidityObj, sizeof(int));
-				write(mapSave, &destructibleObj, sizeof(int));
-				write(mapSave, &collectibleObj, sizeof(int));
-				write(mapSave, &generatorObj, sizeof(int));*/
-				write(mapSave, &n, sizeof(char));				
+				write(mapSave, &nameObj, sizeof(int));				
 			}
 		}
 	write(mapSave, &endOfMap, sizeof(int));
-	//write(mapSave, ,);
+	
+	int length, framesObj, solidityObj, destructibleObj, collectibleObj, generatorObj;
+	for(int i=0 ; i<nbObjects ; i++){
+		length = strlen(map_get_name(i));
+		framesObj = map_get_frames(i);
+		solidityObj = map_get_solidity(i);
+		destructibleObj = map_is_destructible(i);
+		collectibleObj = map_is_collectible(i);
+		generatorObj = map_is_generator(i);
+
+		write(mapSave, &length, sizeof(int));
+		write(mapSave, map_get_name(i), strlen(map_get_name(i))*sizeof(char));
+		write(mapSave, &framesObj, sizeof(int));
+		write(mapSave, &solidityObj, sizeof(int));
+		write(mapSave, &destructibleObj, sizeof(int));
+		write(mapSave, &collectibleObj, sizeof(int));
+		write(mapSave, &generatorObj, sizeof(int));
+	}
 
 	printf("Map save performed to the end\n");
 }
@@ -96,39 +98,45 @@ void map_save (char *filename){
 void map_load (char *filename){
 	int mapLoad = open(filename, O_RDONLY, 0666);
 	
-	char n;
-	int width=0;
-	int height=0;
-	int nbObjects = 0;
+	int width, height, nbObjects;
 	read(mapLoad, &width, sizeof(int));
 	read(mapLoad, &height, sizeof(int));
 	read(mapLoad, &nbObjects, sizeof(int));
-	read(mapLoad, &n, sizeof(char));
 	
-	if(width!=0 && height!=0)
-		map_allocate (width, height);
+	map_allocate (width, height);
 
-	// Chargement map
-	int x, y, nameObj;
-	while(read(mapLoad, &x, sizeof(int))!=-1){
-		read(mapLoad, &y, sizeof(int));
-		read(mapLoad, &nameObj, sizeof(int));
-		read(mapLoad, &n, sizeof(char));
-		map_set(x, y, nameObj);
+	int x = 0;
+	int y, nameObj;
+	while(x!=-1){
+		read(mapLoad, &x, sizeof(int));
+		if(x!=-1){
+			read(mapLoad, &y, sizeof(int));
+			read(mapLoad, &nameObj, sizeof(int));
+			map_set(x, y, nameObj);
+		}
 	}
 
-	if(nbObjects!=0)
-		map_object_begin (nbObjects);
+	map_object_begin (nbObjects);
+	int length, frame, solidity, destructible, collectible, generator;	
 
+	char * name = NULL;
 	for(int i=0 ; i<nbObjects ; i++){
-		read(mapLoad, ,);
-		/*map_object_add ("images/ground.png", 1, MAP_OBJECT_SOLID);
-		map_object_add ("images/wall.png", 1, MAP_OBJECT_SOLID);
-		map_object_add ("images/grass.png", 1, MAP_OBJECT_SEMI_SOLID);
-		map_object_add ("images/marble.png", 1, MAP_OBJECT_SOLID | MAP_OBJECT_DESTRUCTIBLE);
-		map_object_add ("images/flower.png", 1, MAP_OBJECT_AIR);
-		map_object_add ("images/coin.png", 20, MAP_OBJECT_AIR | MAP_OBJECT_COLLECTIBLE);*/
+		read(mapLoad, &length, sizeof(int));
+
+		name = realloc(name, (length+1)*sizeof(char));
+		name[length]='\0';
+		read(mapLoad, name, length*sizeof(char));
+
+		read(mapLoad, &frame, sizeof(int));
+		read(mapLoad, &solidity, sizeof(int));
+		read(mapLoad, &destructible, sizeof(int));
+		read(mapLoad, &collectible, sizeof(int));
+		read(mapLoad, &generator, sizeof(int));
+
+		map_object_add(name, frame, solidity | ((destructible)?MAP_OBJECT_DESTRUCTIBLE:solidity) | ((collectible)?MAP_OBJECT_COLLECTIBLE:solidity) | ((generator)?MAP_OBJECT_GENERATOR:solidity));
+	
 	}
+	free(name);
 
 	map_object_end ();
 }
