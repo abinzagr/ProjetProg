@@ -50,8 +50,9 @@ int main(int argc, char ** argv){
 			printf("%d\n", c);
 		}
 	}else if(i>=4){ //&& i<=7){
-		mapFile = open(argv[1], O_RDWR, 0666); // ouvrir fichier original en RD_ONLY, créer copy modifier en WR_ONLY.
-		if(mapFile==-1){
+		mapFile = open(argv[1], O_RDONLY, 0666);
+		int fdTmp = open("tmp.map", O_WRONLY|O_CREAT, 0666);
+		if(mapFile==-1 || fdTmp==-1){
 			fprintf(stderr, "Le fichier ne s'est pas ouvert correctement.\n");
 			exit(EXIT_FAILURE);
 		}
@@ -62,28 +63,58 @@ int main(int argc, char ** argv){
 			}
 			if(i==4 || i==5){
 				int arg = atoi(argv[3]);
-				int wh, x = 0, y, n;
+				int whn, x = 0, y, n, changeOfMap, nbbytes = 1;
 				if(arg==0){
 					fprintf(stderr, "Quatrieme argument invalide (requiert un entier).\n");
 					exit(EXIT_FAILURE);
 				}
-				if(i==5)
-					lseek(mapFile, sizeof(int), SEEK_SET);
-				read(mapFile, &wh, sizeof(int));
-				lseek(mapFile, -sizeof(int), SEEK_CUR);
-				write(mapFile, &arg, sizeof(int));
-				lseek(mapFile, 3*sizeof(int), SEEK_SET);
+
+				for(int j=0 ; j<3 ; j++){
+					read(mapFile, &whn, sizeof(int));
+					if((i==4 && j==0) || (i==5 && j==1)){
+						write(fdTmp, &arg, sizeof(int));
+						if(i==5)
+							changeOfMap = arg-whn;
+					}
+					else
+						write(fdTmp, &whn, sizeof(int));
+				}
+
 				while(x!=-1){
 					read(mapFile, &x, sizeof(int));
 					if(x!=-1){
 						read(mapFile, &y, sizeof(int));
 						read(mapFile, &n, sizeof(int));
+						if(i==4 && x<arg){
+							write(fdTmp, &x, sizeof(int));
+							write(fdTmp, &y, sizeof(int));
+							write(fdTmp, &n, sizeof(int));
+						}else if(i==5){
+							y+=changeOfMap;
+							if(y<arg && y>=0){
+								write(fdTmp, &x, sizeof(int));
+								write(fdTmp, &y, sizeof(int));
+								write(fdTmp, &n, sizeof(int));
+							}
+						}
 					}
-				} // A FINIR
+				}
+				write(fdTmp, &x, sizeof(int));
+				while(nbbytes!=0){
+					nbbytes = read(mapFile, &x, sizeof(int));
+					write(fdTmp, &x, nbbytes);
+				}
 			}else{
 			}
 		}else{
 		}
+		close(mapFile);
+		int length = (int)strlen("mv tmp.map ")+(int)strlen(argv[1]);
+		char * commandeSys = malloc(sizeof(char)*length);
+		strcat(commandeSys, "mv tmp.map ");
+		strcat(commandeSys, argv[1]);
+		execlp("/bin/sh" ,"sh", "-c", commandeSys, NULL);
+		free(commandeSys);
 	}else{
 		fprintf(stderr, "Commande invalide.\n");
 		exit(EXIT_FAILURE);
