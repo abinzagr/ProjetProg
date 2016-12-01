@@ -19,63 +19,63 @@ void usage2(char * commande){
 int main(int argc, char ** argv){
 	if(argc<3)
 		usage(argv[0]);
-	int mapFile, c, i = -1;
+	int mapFile, c, argI = -1;
 	char * commande = argv[2];
 
 	if(!strcmp(commande, "--getwidth"))
-		i=0;
+		argI=0;
 	if(!strcmp(commande, "--getheight"))
-		i=1;
+		argI=1;
 	if(!strcmp(commande, "--getobjects"))
-		i=2;
+		argI=2;
 	if(!strcmp(commande, "--getinfo"))
-		i=3;
+		argI=3;
 	if(!strcmp(commande, "--setwidth"))
-		i=4;
+		argI=4;
 	if(!strcmp(commande, "--setheight"))
-		i=5;
+		argI=5;
 	if(!strcmp(commande, "--setobjects"))
-		i=6;
+		argI=6;
 	if(!strcmp(commande, "--pruneobjects"))
-		i=7;
+		argI=7;
 
-	if(i>=0 && i<=3){
+	if(argI>=0 && argI<=3){
 		mapFile = open(argv[1], O_RDONLY, 0666);
 		if(mapFile==-1)
 			usage2("Le fichier ne s'est pas ouvert correctement.");
 		int k = 1;
-		if(i==1)
+		if(argI==1)
 			lseek(mapFile, sizeof(int), SEEK_SET);
-		if(i==2)
+		if(argI==2)
 			lseek(mapFile, 2*sizeof(int), SEEK_SET);
-		if(i==3)
+		if(argI==3)
 			k=3;
-		for(int j=0 ; j<k ; j++){
+		for(int i=0 ; i<k ; i++){
 			read(mapFile, &c, sizeof(int));
 			printf("%d\n", c);
 		}
-	}else if(i>=4){ //&& i<=7){
+	}else if(argI>=4){
 		mapFile = open(argv[1], O_RDONLY, 0666);
 		int fdTmp = open("tmp.map", O_WRONLY|O_CREAT, 0666);
 		if(mapFile==-1 || fdTmp==-1)
 			usage2("Le fichier ne s'est pas ouvert correctement.");
-		if(i!=7){
+		if(argI!=7){
 			if(argc<4)
 				usage2("Quatrieme argument requis.");
-			if(i==4 || i==5){
+			if(argI==4 || argI==5){
 				int arg = atoi(argv[3]);
 				int whn, x = 0, y, n, changeOfMap, nbbytes = 1;
 				if(!arg)
 					usage2("Quatrieme argument invalide (requiert un entier).");
-				if(i==4 && (arg<MIN_WIDTH||arg>MAX_WIDTH))
+				if(argI==4 && (arg<MIN_WIDTH||arg>MAX_WIDTH))
 					usage2("Largeur non valide.");
-				if(i==5 && (arg<MIN_HEIGHT||arg>MAX_HEIGHT))
+				if(argI==5 && (arg<MIN_HEIGHT||arg>MAX_HEIGHT))
 					usage2("Hauteur non valide.");
-				for(int j=0 ; j<3 ; j++){
+				for(int i=0 ; i<3 ; i++){
 					read(mapFile, &whn, sizeof(int));
-					if((i==4 && j==0) || (i==5 && j==1)){
+					if((argI==4 && i==0) || (argI==5 && i==1)){
 						write(fdTmp, &arg, sizeof(int));
-						if(i==5)
+						if(argI==5)
 							changeOfMap = arg-whn;
 					}
 					else
@@ -87,11 +87,11 @@ int main(int argc, char ** argv){
 					if(x!=-1){
 						read(mapFile, &y, sizeof(int));
 						read(mapFile, &n, sizeof(int));
-						if(i==4 && x<arg){
+						if(argI==4 && x<arg){
 							write(fdTmp, &x, sizeof(int));
 							write(fdTmp, &y, sizeof(int));
 							write(fdTmp, &n, sizeof(int));
-						}else if(i==5){
+						}else if(argI==5){
 							y+=changeOfMap;
 							if(y<arg && y>=0){
 								write(fdTmp, &x, sizeof(int));
@@ -100,7 +100,7 @@ int main(int argc, char ** argv){
 							}
 						}
 					}
-				}printf("test\n");
+				}
 				write(fdTmp, &x, sizeof(int));
 				while(nbbytes!=0){
 					nbbytes = read(mapFile, &x, sizeof(int));
@@ -109,7 +109,7 @@ int main(int argc, char ** argv){
 			}else{
 				if(((argc-3)%6))
 					usage2("Nombre d'arguments de la liste invalide (6 demandes).");
-				int x=0, y, n, length, frame, solidity, destructible, collectible, generator;
+				int x=0, length, frame, solidity, destructible, collectible, generator;
 				char * name = NULL;
 				char * objectArg = NULL;
 
@@ -186,10 +186,10 @@ int main(int argc, char ** argv){
 					while(x!=-1){
 						read(mapFile, &x, sizeof(int));
 						if(x!=-1){
-							read(mapFile, &y, sizeof(int));
-							read(mapFile, &n, sizeof(int));
+							lseek(mapFile, sizeof(int), SEEK_CUR);
+							write(mapFile, &x, sizeof(int));
 							lseek(fdTmp, 2*sizeof(int), SEEK_CUR);
-							if(n>length)
+							if(x>length)
 								write(fdTmp, &length, sizeof(int));
 							else
 								lseek(fdTmp, sizeof(int), SEEK_CUR);
@@ -198,6 +198,53 @@ int main(int argc, char ** argv){
 				}
 			}
 		}else{
+			int x=0, nbObj, changeOfObj=0, newNbObj=0;
+			char * name = NULL;
+			lseek(mapFile, 2*sizeof(int), SEEK_SET);
+			read(mapFile, &nbObj, sizeof(int));
+			int * used = malloc(nbObj*sizeof(int));
+			for(int i=0 ; i<nbObj ; i++)
+				used[i] = 0;
+			while(x!=-1){
+				read(mapFile, &x, sizeof(int));
+				if(x!=-1){
+					lseek(mapFile, sizeof(int), SEEK_CUR);
+					read(mapFile, &x, sizeof(int));
+					if(used[x]==0)
+						used[x]=1;
+				}
+			}
+			x=0;
+			for(int i=0 ; i<nbObj ; i++)
+				if(used[i]==0)
+					changeOfObj=1;
+			if(changeOfObj==1){
+				lseek(mapFile, 0, SEEK_SET);
+				while(x!=-1){
+					read(mapFile, &x, sizeof(int));
+					write(fdTmp, &x, sizeof(int));				
+				}
+				for(int i=0 ; i<nbObj ; i++){
+					read(mapFile, &x, sizeof(int));
+					name = realloc(name, (x+1)*sizeof(char));
+					name[x]='\0';
+					read(mapFile, name, x*sizeof(char));
+					if(used[i]==1){
+						write(fdTmp, &x, sizeof(int));
+						write(fdTmp, name, x*sizeof(char));
+						for(int j=0 ; j<5 ; j++){
+							read(mapFile, &x, sizeof(int));
+							write(fdTmp, &x, sizeof(int));
+						}
+						newNbObj++;
+					}else
+						for(int j=0 ; j<5 ; j++)
+							read(mapFile, &x, sizeof(int));
+				}
+				lseek(fdTmp, 2*sizeof(int), SEEK_SET);
+				write(fdTmp, &newNbObj, sizeof(int));
+			}
+			free(name);
 		}
 		close(mapFile);
 		char * commandeSys = malloc(sizeof(char)*(strlen("mv tmp.map ")+strlen(argv[1])));
