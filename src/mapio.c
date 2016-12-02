@@ -49,27 +49,14 @@ void map_save (char *filename){
 	write(mapSave, &height, sizeof(int));
 	write(mapSave, &nbObjects, sizeof(int));
 
-	int object, nameObj, endOfMap = -1;
+	int object, endOfMap = -1;
 	for(int i=0 ; i<width ; i++)
 		for(int j=0 ; j<height ; j++){
 			object = map_get(i,j);
-			if(object!=MAP_OBJECT_NONE){
-				if(!strcmp(map_get_name(object), "images/ground.png"))
-					nameObj = 0;
-				else if(!strcmp(map_get_name(object), "images/wall.png"))
-					nameObj = 1;
-				else if(!strcmp(map_get_name(object), "images/grass.png"))
-					nameObj = 2;
-				else if(!strcmp(map_get_name(object), "images/marble.png"))
-					nameObj = 3;
-				else if(!strcmp(map_get_name(object), "images/flower.png"))
-					nameObj = 4;
-				else if(!strcmp(map_get_name(object), "images/coin.png"))
-					nameObj = 5;
-
+			if(object!=MAP_OBJECT_NONE){ // Problème
 				write(mapSave, &i, sizeof(int));
 				write(mapSave, &j, sizeof(int));
-				write(mapSave, &nameObj, sizeof(int));				
+				write(mapSave, &object, sizeof(int));				
 			}
 		}
 	write(mapSave, &endOfMap, sizeof(int));
@@ -102,11 +89,8 @@ void map_load (char *filename){
 	read(mapLoad, &width, sizeof(int));
 	read(mapLoad, &height, sizeof(int));
 	read(mapLoad, &nbObjects, sizeof(int));
-	
 	map_allocate (width, height);
-
-	int x = 0;
-	int y, nameObj;
+	int x = 0, y, nameObj;
 	while(x!=-1){
 		read(mapLoad, &x, sizeof(int));
 		if(x!=-1){
@@ -115,7 +99,6 @@ void map_load (char *filename){
 			map_set(x, y, nameObj);
 		}
 	}
-
 	map_object_begin (nbObjects);
 	int length, frame, solidity, destructible, collectible, generator;	
 
@@ -132,12 +115,9 @@ void map_load (char *filename){
 		read(mapLoad, &destructible, sizeof(int));
 		read(mapLoad, &collectible, sizeof(int));
 		read(mapLoad, &generator, sizeof(int));
-
 		map_object_add(name, frame, solidity | ((destructible)?MAP_OBJECT_DESTRUCTIBLE:solidity) | ((collectible)?MAP_OBJECT_COLLECTIBLE:solidity) | ((generator)?MAP_OBJECT_GENERATOR:solidity));
-	
 	}
 	free(name);
-
 	map_object_end ();
 }
 
