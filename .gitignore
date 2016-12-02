@@ -1,5 +1,9 @@
-mapio.o
-temp*
+obj/mapio.o
+
+obj/tempo.o
+
 game
-saved.map
+
+maps/saved.map
+
 maputil
