@@ -1,4 +1,5 @@
-*.o
+mapio.o
+tempo.o
 game
-*.map
+saved.map
 maputil
