@@ -150,7 +150,6 @@ void setObjects(int nbArg, char ** arguments, int mapFile, int fdTmp){
 			generator = 0;
 		else
 			usage2("Valeur de generator : generator | not-generator.");
-printf("%s (%d) : %d | %d | %d | %d | %d\n", name, (int)strlen(name), frame, solidity, destructible, collectible, generator);
 		write(fdTmp, &length, sizeof(int));
 		write(fdTmp, name, length*sizeof(char));
 		write(fdTmp, &frame, sizeof(int));
