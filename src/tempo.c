@@ -9,7 +9,7 @@
 #include <signal.h>
 #include <pthread.h>
 #include <stdbool.h>
-
+static pthread_mutex_t  mutex = PTHREAD_MUTEX_INITIALIZER;
 #include "timer.h"
 void* param=NULL;
 // Return number of elapsed µsec since... a long time ago
@@ -25,10 +25,19 @@ static unsigned long get_time (void)
   return tv.tv_sec * 1000000UL + tv.tv_usec;
 }
 
+/*timer values */
+typedef struct echeancier {
+	struct itimerval timer;
+	void* param;
+	bool expire;
+	} echeancier;
+
+echeancier tab_echeancier[200];
 
 /*handler demon*/
 void hand(int s)
-{	//printf("\nSignal %d recu\n", s);
+{	printf("\nSignal %d recu\n", s);
+	//printf ("sdl_push_event(%p) appelée au temps %ld\n", param, get_time ());
 	sdl_push_event(param);
 }
 
@@ -45,6 +54,7 @@ void *Demon(void *p)
 		while(1){
 			sigsuspend(&(my_set));
 		}
+		
 }
 
 
@@ -58,11 +68,12 @@ int timer_init (void)
  printf("pid:%d\n",getpid());
  struct sigaction action;
  action.sa_handler = hand;
- sigset_t pere;
+ sigset_t pere; 
  sigfillset(&pere);
  sigdelset(&pere,SIGALRM);
  sigprocmask(SIG_BLOCK, &pere,NULL);
- sigaction (SIGALRM, &action, NULL); 
+ sigaction(SIGALRM, &action, NULL); 
+ 
  return 1; 
  
 }
@@ -71,13 +82,15 @@ void timer_set (Uint32 delay, void *parametre)
 {
   struct itimerval time;
   int sec=delay/1000;
-  int usec=(delay-sec*1000)*1000;
-  time.it_interval.tv_sec=sec;
+  int usec=(delay-sec*1000)*1000; /* for()!!  */
+  time.it_interval.tv_sec=sec; //echeancier[i].timer.time.it_interval.tv_sec=sec;
   time.it_interval.tv_usec=usec;
   time.it_value.tv_sec=sec;
   time.it_value.tv_usec=usec;
   setitimer(ITIMER_REAL,&time,NULL);
-  param=parametre;	
+  param=parametre;
+  
+  	
   //while (1);
   //TODOO
 }
