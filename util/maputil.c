@@ -49,6 +49,8 @@ void getInfos(int argI, char * file){
 
 void setWidthHeight(char * argument, int mapFile, int fdTmp, int argI){
 	int arg = atoi(argument);
+	int width_old = 0;
+	int height_old = 0; 
 	int whn, x = 0, y, n, changeOfMap, nbbytes = 1;
 	if(!arg)
 		usage2("Quatrieme argument invalide (requiert un entier).");
@@ -56,12 +58,17 @@ void setWidthHeight(char * argument, int mapFile, int fdTmp, int argI){
 		usage2("Largeur non valide.");
 	if(argI==5 && (arg<MIN_HEIGHT||arg>MAX_HEIGHT))
 		usage2("Hauteur non valide.");
-	for(int i=0 ; i<3 ; i++){
+	for(int i = 0 ; i < 3 ; i++){
 		read(mapFile, &whn, sizeof(int));
-		if((argI==4 && i==0) || (argI==5 && i==1)){
+		if(i == 0)
+			width_old=whn;
+		if(i == 1)
+			height_old = whn;
+		if((argI == 4 && i == 0) || (argI == 5 && i == 1)){
 			write(fdTmp, &arg, sizeof(int));
-			if(argI==5)
-			changeOfMap = arg-whn;
+			if(argI == 5){
+				changeOfMap = arg-whn;
+			}
 		}else
 			write(fdTmp, &whn, sizeof(int));
 	}
@@ -71,16 +78,65 @@ void setWidthHeight(char * argument, int mapFile, int fdTmp, int argI){
 		if(x!=-1){
 			read(mapFile, &y, sizeof(int));
 			read(mapFile, &n, sizeof(int));
-			if(argI==4 && x<arg){
-				write(fdTmp, &x, sizeof(int));
-				write(fdTmp, &y, sizeof(int));
-				write(fdTmp, &n, sizeof(int));
-			}else if(argI==5){
-				y+=changeOfMap;
-				if(y<arg && y>=0){
+			/*retrecissement de la map en largeur*/
+			if(argI==4 && arg<width_old){
+				int mur = 1;
+				int width=arg-1;
+				if(x<width || (x==width && y==height_old-1)){
 					write(fdTmp, &x, sizeof(int));
 					write(fdTmp, &y, sizeof(int));
 					write(fdTmp, &n, sizeof(int));
+				}
+				for(int j = 0; j < height_old-1; ++j){
+					write(fdTmp, &width, sizeof(int));
+					write(fdTmp, &j, sizeof(int));
+					write(fdTmp, &mur, sizeof(int));
+				}
+			}
+			/*agrandissement de la map en largeur*/
+			else if(argI==4 && arg>width_old){
+				int wall=1; int sol = 0;int ord=height_old-1;int larg=arg-1;
+				if(x<width_old-2){
+					write(fdTmp, &x, sizeof(int));
+					write(fdTmp, &y, sizeof(int));
+					write(fdTmp, &n, sizeof(int));
+				}
+				for(int x = width_old-2; x <arg ; ++x){
+					write(fdTmp, &x, sizeof(int));
+					write(fdTmp, &ord, sizeof(int));
+					write(fdTmp, &sol, sizeof(int));
+				}
+				for(int z = 0; z < height_old-1; ++z){
+					write(fdTmp, &larg, sizeof(int));
+					write(fdTmp, &z, sizeof(int));
+					write(fdTmp, &wall, sizeof(int));
+				}	
+			}
+			else if(argI==5){
+				y+=changeOfMap;
+				/*retrecissement de la map en hauteur*/
+				if(arg<height_old){
+					if(y<arg && y>=0){
+						write(fdTmp, &x, sizeof(int));
+						write(fdTmp, &y, sizeof(int));
+						write(fdTmp, &n, sizeof(int));
+					}
+				}	
+				/*agrandissement de la map en hauteur*/
+				else if(arg>height_old){
+					int mur=1; int mur_gauche = 0, mur_droit = width_old-1;;
+					write(fdTmp, &x, sizeof(int));
+					write(fdTmp, &y, sizeof(int));
+					write(fdTmp, &n, sizeof(int));
+						
+					for(int j = 0; j < (arg-height_old); ++j){
+						write(fdTmp, &mur_gauche, sizeof(int));
+						write(fdTmp, &j, sizeof(int));
+						write(fdTmp, &mur, sizeof(int));
+						write(fdTmp, &mur_droit, sizeof(int));
+						write(fdTmp, &j, sizeof(int));
+						write(fdTmp, &mur, sizeof(int));	
+					}
 				}
 			}
 		}
