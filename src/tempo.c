@@ -39,6 +39,9 @@ void hand(int s)
 {	printf("\nSignal %d recu\n", s);
 	//printf ("sdl_push_event(%p) appelée au temps %ld\n", param, get_time ());
 	sdl_push_event(param);
+	//recuperer le premier indice ou expire =false
+	//sdl_push_event
+	//
 }
 
 /*Demon fonction threads */
@@ -63,18 +66,27 @@ void *Demon(void *p)
 
 // timer_init returns 1 if timers are fully implemented, 0 otherwise
 int timer_init (void)
-{pthread_t pid;
- pthread_create(&pid,NULL,Demon,/*(void*)p*/NULL);
- printf("pid:%d\n",getpid());
- struct sigaction action;
- action.sa_handler = hand;
- sigset_t pere; 
- sigfillset(&pere);
- sigdelset(&pere,SIGALRM);
- sigprocmask(SIG_BLOCK, &pere,NULL);
- sigaction(SIGALRM, &action, NULL); 
+{
+  pthread_t pid;
+  pthread_create(&pid,NULL,Demon,/*(void*)p*/NULL);
+  printf("pid:%d\n",getpid());
+  struct sigaction action;
+  action.sa_handler = hand;
+  sigset_t pere; 
+  sigfillset(&pere);
+  sigdelset(&pere,SIGALRM);
+  sigprocmask(SIG_BLOCK, &pere,NULL);
+  sigaction(SIGALRM, &action, NULL);
+  for(int i = 0; i < 200; i++){
+    //initialiser echeance[i]
+    tab_echeancier[i].timer.it_interval.tv_sec = 0;
+    tab_echeancier[i].timer.it_interval.tv_usec = 0;
+    tab_echeancier[i].timer.it_value.tv_sec = 0;
+    tab_echeancier[i].timer.it_value.tv_usec = 0;
+    //init expire ? param ?
+  }
  
- return 1; 
+  return 1; 
  
 }
 
@@ -83,13 +95,19 @@ void timer_set (Uint32 delay, void *parametre)
   struct itimerval time;
   int sec=delay/1000;
   int usec=(delay-sec*1000)*1000; /* for()!!  */
-  time.it_interval.tv_sec=sec; //echeancier[i].timer.time.it_interval.tv_sec=sec;
+  /*time.it_interval.tv_sec=sec; //echeancier[i].timer.time.it_interval.tv_sec=sec;
   time.it_interval.tv_usec=usec;
   time.it_value.tv_sec=sec;
   time.it_value.tv_usec=usec;
   setitimer(ITIMER_REAL,&time,NULL);
-  param=parametre;
-  
+  param=parametre;*/
+  int i = 0;
+  tab_echeancier[i].timer.it_interval.tv_sec=0;
+  tab_echeancier[i].timer.it_interval.tv_usec=0;
+  tab_echeancier[i].timer.it_value.tv_sec=sec;
+  tab_echeancier[i].timer.it_value.tv_usec=usec;
+  tab_echeancier[i].param = parametre;
+  setitimer(ITIMER_REAL, &(tab_echeancier[i].timer), NULL); 
   	
   //while (1);
   //TODOO
