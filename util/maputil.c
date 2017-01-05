@@ -11,21 +11,21 @@ void usage2(char * commande);
 int setCommande(char * commande){
 	int argI = -1;
 	if(!strcmp(commande, "--getwidth"))
-		argI=0;
+		argI = 0;
 	if(!strcmp(commande, "--getheight"))
-		argI=1;
+		argI = 1;
 	if(!strcmp(commande, "--getobjects"))
-		argI=2;
+		argI = 2;
 	if(!strcmp(commande, "--getinfo"))
-		argI=3;
+		argI = 3;
 	if(!strcmp(commande, "--setwidth"))
-		argI=4;
+		argI = 4;
 	if(!strcmp(commande, "--setheight"))
-		argI=5;
+		argI = 5;
 	if(!strcmp(commande, "--setobjects"))
-		argI=6;
+		argI = 6;
 	if(!strcmp(commande, "--pruneobjects"))
-		argI=7;
+		argI = 7;
 	return argI;
 }
 
@@ -40,7 +40,7 @@ void getInfos(int argI, char * file){
 	if(argI==2)
 		lseek(mapFile, 2*sizeof(int), SEEK_SET);
 	if(argI==3)
-		k=3;
+		k = 3;
 	for(int i=0 ; i<k ; i++){
 		read(mapFile, &x, sizeof(int));
 		printf("%d\n", x);
@@ -49,30 +49,33 @@ void getInfos(int argI, char * file){
 
 void setWidthHeight(char * argument, int mapFile, int fdTmp, int argI){
 	int arg = atoi(argument);
-	int width_old = 0;
-	int height_old = 0; 
+	int width_old, height_old; 
 	int whn, x = 0, y, n, changeOfMap, nbbytes = 1;
+	int wall = 1, floor = 0, width, height, x_wall_left = 0, x_wall_right;
 	if(!arg)
 		usage2("Quatrieme argument invalide (requiert un entier).");
 	if(argI==4 && (arg<MIN_WIDTH||arg>MAX_WIDTH))
 		usage2("Largeur non valide.");
 	if(argI==5 && (arg<MIN_HEIGHT||arg>MAX_HEIGHT))
 		usage2("Hauteur non valide.");
-	for(int i = 0 ; i < 3 ; i++){
+	for(int i=0 ; i<3 ; i++){
 		read(mapFile, &whn, sizeof(int));
-		if(i == 0)
-			width_old=whn;
-		if(i == 1)
+		if(i==0)
+			width_old = whn;
+		if(i==1)
 			height_old = whn;
-		if((argI == 4 && i == 0) || (argI == 5 && i == 1)){
+		if((argI==4 && i==0) || (argI==5 && i==1)){
 			write(fdTmp, &arg, sizeof(int));
-			if(argI == 5){
+			if(argI==5)
 				changeOfMap = arg-whn;
-			}
 		}else
 			write(fdTmp, &whn, sizeof(int));
-	}
+	}	
+	if((argI==4 && arg==width_old) || (argI==5 && arg==height_old))
+		usage2("Valeur similaire. Aucun changement effectue.");
 
+	width = arg-1;
+	height = height_old-1;
 	while(x!=-1){
 		read(mapFile, &x, sizeof(int));
 		if(x!=-1){
@@ -80,40 +83,37 @@ void setWidthHeight(char * argument, int mapFile, int fdTmp, int argI){
 			read(mapFile, &n, sizeof(int));
 			/*retrecissement de la map en largeur*/
 			if(argI==4 && arg<width_old){
-				int mur = 1;
-				int width=arg-1;
 				if(x<width || (x==width && y==height_old-1)){
 					write(fdTmp, &x, sizeof(int));
 					write(fdTmp, &y, sizeof(int));
 					write(fdTmp, &n, sizeof(int));
 				}
-				for(int j = 0; j < height_old-1; ++j){
+				for(int j=0 ; j<height_old-1 ; ++j){
 					write(fdTmp, &width, sizeof(int));
 					write(fdTmp, &j, sizeof(int));
-					write(fdTmp, &mur, sizeof(int));
+					write(fdTmp, &wall, sizeof(int));
 				}
 			}
 			/*agrandissement de la map en largeur*/
 			else if(argI==4 && arg>width_old){
-				int wall=1; int sol = 0;int ord=height_old-1;int larg=arg-1;
-				if(x<width_old-2){
+				if(x<width_old-1){
 					write(fdTmp, &x, sizeof(int));
 					write(fdTmp, &y, sizeof(int));
 					write(fdTmp, &n, sizeof(int));
 				}
-				for(int x = width_old-2; x <arg ; ++x){
-					write(fdTmp, &x, sizeof(int));
-					write(fdTmp, &ord, sizeof(int));
-					write(fdTmp, &sol, sizeof(int));
+				for(int i=width_old-1 ; i<arg ; ++i){
+					write(fdTmp, &i, sizeof(int));
+					write(fdTmp, &height, sizeof(int));
+					write(fdTmp, &floor, sizeof(int));
 				}
-				for(int z = 0; z < height_old-1; ++z){
-					write(fdTmp, &larg, sizeof(int));
-					write(fdTmp, &z, sizeof(int));
+				for(int j=0 ; j<height_old-1 ; ++j){
+					write(fdTmp, &width, sizeof(int));
+					write(fdTmp, &j, sizeof(int));
 					write(fdTmp, &wall, sizeof(int));
 				}	
 			}
 			else if(argI==5){
-				y+=changeOfMap;
+				y += changeOfMap;
 				/*retrecissement de la map en hauteur*/
 				if(arg<height_old){
 					if(y<arg && y>=0){
@@ -124,18 +124,18 @@ void setWidthHeight(char * argument, int mapFile, int fdTmp, int argI){
 				}	
 				/*agrandissement de la map en hauteur*/
 				else if(arg>height_old){
-					int mur=1; int mur_gauche = 0, mur_droit = width_old-1;;
+					x_wall_right = width_old-1;;
 					write(fdTmp, &x, sizeof(int));
 					write(fdTmp, &y, sizeof(int));
 					write(fdTmp, &n, sizeof(int));
 						
-					for(int j = 0; j < (arg-height_old); ++j){
-						write(fdTmp, &mur_gauche, sizeof(int));
+					for(int j=0 ; j<(arg-height_old) ; ++j){
+						write(fdTmp, &x_wall_left, sizeof(int));
 						write(fdTmp, &j, sizeof(int));
-						write(fdTmp, &mur, sizeof(int));
-						write(fdTmp, &mur_droit, sizeof(int));
+						write(fdTmp, &wall, sizeof(int));
+						write(fdTmp, &x_wall_right, sizeof(int));
 						write(fdTmp, &j, sizeof(int));
-						write(fdTmp, &mur, sizeof(int));	
+						write(fdTmp, &wall, sizeof(int));	
 					}
 				}
 			}
@@ -151,7 +151,7 @@ void setWidthHeight(char * argument, int mapFile, int fdTmp, int argI){
 void setObjects(int nbArg, char ** arguments, int mapFile, int fdTmp){
 	if(((nbArg-3)%6))
 		usage2("Nombre d'arguments de la liste invalide (6 demandes).");
-	int x=0, nbObj, length, frame, solidity, destructible, collectible, generator;
+	int x = 0, nbObj, length, frame, solidity, destructible, collectible, generator;
 	char * name = NULL;
 	char * objectArg = NULL;
 
@@ -241,7 +241,7 @@ void setObjects(int nbArg, char ** arguments, int mapFile, int fdTmp){
 }
 
 void pruneObjects(int mapFile, int fdTmp){
-	int x=0, nbObj, changeOfObj=0, newNbObj=0;
+	int x = 0, nbObj, changeOfObj = 0, newNbObj = 0, new_n;
 	char * name = NULL;
 	lseek(mapFile, 2*sizeof(int), SEEK_SET);
 	read(mapFile, &nbObj, sizeof(int));
@@ -254,13 +254,16 @@ void pruneObjects(int mapFile, int fdTmp){
 			lseek(mapFile, sizeof(int), SEEK_CUR);
 			read(mapFile, &x, sizeof(int));
 			if(used[x]==0)
-				used[x]=1;
+				used[x] = 1;
 		}
 	}
-	x=0;
-	for(int i=0 ; i<nbObj ; i++)
+	x = 0;
+	for(int i=0 ; i<nbObj ; i++){
 		if(used[i]==0)
-			changeOfObj=1;
+			changeOfObj = 1;
+		else
+			newNbObj++;
+	}
 	if(changeOfObj==1){
 		lseek(mapFile, 0, SEEK_SET);
 		while(x!=-1){
@@ -270,7 +273,7 @@ void pruneObjects(int mapFile, int fdTmp){
 		for(int i=0 ; i<nbObj ; i++){
 			read(mapFile, &x, sizeof(int));
 			name = realloc(name, (x+1)*sizeof(char));
-			name[x]='\0';
+			name[x] = '\0';
 			read(mapFile, name, x*sizeof(char));
 			if(used[i]==1){
 				write(fdTmp, &x, sizeof(int));
@@ -279,14 +282,31 @@ void pruneObjects(int mapFile, int fdTmp){
 					read(mapFile, &x, sizeof(int));
 					write(fdTmp, &x, sizeof(int));
 				}
-				newNbObj++;
 			}else
-				for(int j=0 ; j<5 ; j++)
-					read(mapFile, &x, sizeof(int));
+				lseek(mapFile, 5*sizeof(int), SEEK_CUR);
 		}
 		lseek(fdTmp, 2*sizeof(int), SEEK_SET);
 		write(fdTmp, &newNbObj, sizeof(int));
-	}
+		lseek(mapFile, 3*sizeof(int), SEEK_SET);
+		while(x!=-1){
+			read(mapFile, &x, sizeof(int));
+			if(x!=-1){
+				for(int i=0 ; i<2 ; i++)
+					read(mapFile, &x, sizeof(int));
+				new_n = x;
+				for(int i=0 ; i<x ; i++){
+					if(used[i]==0)
+						new_n--;
+				}
+				lseek(fdTmp, 2*sizeof(int), SEEK_CUR);
+				if(new_n!=x)
+					write(fdTmp, &new_n, sizeof(int));
+				else
+					lseek(fdTmp, sizeof(int), SEEK_CUR);
+			}
+		}
+	}else
+		usage2("Nombre d'objets inchange.");
 	free(name);
 }
 
@@ -297,6 +317,7 @@ void usage(char * commande){
 
 void usage2(char * commande){
 	fprintf(stderr, "%s\n", commande);
+	execlp("/bin/sh", "sh", "-c", "rm tmp.map", NULL);
 	exit(EXIT_FAILURE);
 }
 
@@ -324,6 +345,7 @@ int main(int argc, char ** argv){
 		}else
 			pruneObjects(mapFile, fdTmp);
 		close(mapFile);
+		close(fdTmp);
 		char * commandeSys = malloc(sizeof(char)*(strlen("mv tmp.map ")+strlen(argv[1])));
 		strcat(commandeSys, "mv tmp.map ");
 		strcat(commandeSys, argv[1]);

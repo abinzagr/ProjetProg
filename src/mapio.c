@@ -53,7 +53,7 @@ void map_save (char *filename){
 	for(int i=0 ; i<width ; i++)
 		for(int j=0 ; j<height ; j++){
 			object = map_get(i,j);
-			if(object!=MAP_OBJECT_NONE){ // Problème
+			if(object!=MAP_OBJECT_NONE){
 				write(mapSave, &i, sizeof(int));
 				write(mapSave, &j, sizeof(int));
 				write(mapSave, &object, sizeof(int));				
